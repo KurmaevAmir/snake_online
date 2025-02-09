@@ -10,22 +10,42 @@ import java.util.List;
 import java.util.Set;
 
 public class Snake extends GameObject {
-    private final List<Point> body = new ArrayList<>();
+    public Color color;
+    public final List<Point> body = new ArrayList<>();
     private Direction direction = Direction.RIGHT;
     private Direction nextDirection = Direction.RIGHT;
     private int length = 1;
 
+//    public Snake(Color color) {
+//        this.color = color;
+//        body.add(new Point(0,0));
+//    }
+
     public Snake() {
         super(Game.SCREEN_WIDTH/2, Game.SCREEN_HEIGHT/2, Color.GREEN);
+        body.add(new Point(Game.SCREEN_WIDTH/2, Game.SCREEN_HEIGHT/2)); // Инициализация тела
         reset();
     }
 
-    public void updateDirection(KeyCode key) {
-        switch (key) {
-            case UP -> { if (direction != Direction.DOWN) nextDirection = Direction.UP; }
-            case DOWN -> { if (direction != Direction.UP) nextDirection = Direction.DOWN; }
-            case LEFT -> { if (direction != Direction.RIGHT) nextDirection = Direction.LEFT; }
-            case RIGHT -> { if (direction != Direction.LEFT) nextDirection = Direction.RIGHT; }
+    public void setColor(Color color) {
+        this.color = color;
+    }
+
+    public synchronized void updateDirection(Direction newDir) {
+        if((direction == Direction.UP && newDir != Direction.DOWN) ||
+                (direction == Direction.DOWN && newDir != Direction.UP) ||
+                (direction == Direction.LEFT && newDir != Direction.RIGHT) ||
+                (direction == Direction.RIGHT && newDir != Direction.LEFT)) {
+            nextDirection = newDir;
+        }
+    }
+
+    public void updateDirection(KeyCode keyCode) {
+        switch(keyCode) {
+            case UP: case W: updateDirection(Direction.UP); break;
+            case DOWN: case S: updateDirection(Direction.DOWN); break;
+            case LEFT: case A: updateDirection(Direction.LEFT); break;
+            case RIGHT: case D: updateDirection(Direction.RIGHT); break;
         }
     }
 
@@ -84,7 +104,7 @@ public class Snake extends GameObject {
         return new HashSet<>(body);
     }
 
-    enum Direction {
+    public enum Direction {
         UP(0, -1), DOWN(0, 1), LEFT(-1, 0), RIGHT(1, 0);
         final int dx, dy;
         Direction(int dx, int dy) {
@@ -92,4 +112,15 @@ public class Snake extends GameObject {
             this.dy = dy;
         }
     }
+
+    public void setPosition(int x, int y) {
+        if (!body.isEmpty()) {
+            Point head = body.get(0);
+            head.x = x;
+            head.y = y;
+        } else {
+            body.add(new Point(x, y));
+        }
+    }
+
 }
