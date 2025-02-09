@@ -1,4 +1,4 @@
-package main.java.ru.itis.snake;
+package main.java.ru.itis.snake.server;
 
 import java.io.*;
 import java.net.Socket;
