@@ -25,6 +25,7 @@ public class SnakeClient extends Application {
     private BufferedWriter writer;
     private static final String SERVER_IP = "127.0.0.1";
     private static final int SERVER_PORT = 1234;
+    private boolean gameOver = false;
 
     private String username;
     private final UUID uuid = UUID.randomUUID();
@@ -33,6 +34,7 @@ public class SnakeClient extends Application {
     private GameState gameState = new GameState();
     private Canvas canvas = new Canvas(640, 480);
     private GraphicsContext gc = canvas.getGraphicsContext2D();
+    private Stage stage;
 
     public static void main(String[] args) {
         launch(args);
@@ -68,6 +70,7 @@ public class SnakeClient extends Application {
     }
 
     private void setupUI(Stage stage) {
+        this.stage = stage;
         Pane root = new Pane(canvas);
         Scene scene = new Scene(root);
 
@@ -115,16 +118,27 @@ public class SnakeClient extends Application {
             case "STATE":
                 gameState.updateFromString(parts[1]);
                 break;
+            case "STATUS":
+                Platform.runLater(() ->
+                        stage.setTitle("Змейка - " + parts[1]));
+                break;
+            case "SCORE":
+                Platform.runLater(() ->
+                        stage.setTitle("Змейка - Счет: " + parts[1]));
+                break;
             case "WINNER":
+                gameOver = true;
                 Platform.runLater(() -> {
                     gc.setFill(Color.WHITE);
-                    gc.fillText("Победитель: " + parts[1], 300, 240);
+                    gc.fillText("Победитель: " + parts[1], 240, 240); // Центрируем текст
                 });
                 break;
         }
     }
 
     private void render() {
+        if (gameOver) return;
+
         gc.setFill(Color.BLACK);
         gc.fillRect(0, 0, 640, 480);
 
@@ -136,7 +150,17 @@ public class SnakeClient extends Application {
 
         gc.setFill(Color.RED);
         gc.fillOval(gameState.apple.x, gameState.apple.y, 20, 20);
+
+        // Отрисовка BadFood
+        gc.setFill(Color.ORANGE);
+        gc.fillRect(gameState.badFood.x, gameState.badFood.y, 20, 20);
+
+        // Отрисовка Obstacle
+        gc.setFill(Color.GRAY);
+        gc.fillRoundRect(gameState.obstacle.x, gameState.obstacle.y, 20, 20, 10, 10);
     }
+
+
 
     private void closeEverything(Socket socket, BufferedReader reader, BufferedWriter writer) {
         try {

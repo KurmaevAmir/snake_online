@@ -19,15 +19,22 @@ public class SnakeServer {
             Handler handler = new Handler(socket);
             new Thread(handler).start();
 
-            if (waitingPlayers.size() >= 3) {
-                List<Handler> sessionPlayers = new ArrayList<>(waitingPlayers);
-                sessionPlayers.add(handler);
-                GameSession gameSession = new GameSession(sessionPlayers);
-                sessionPlayers.forEach(h -> h.setGameSession(gameSession));
-                new Thread(gameSession).start();
-                waitingPlayers.clear();
-            } else {
-                waitingPlayers.add(handler);
+            synchronized (SnakeServer.class) {
+                if (waitingPlayers.size() >= 3) {
+                    List<Handler> sessionPlayers = new ArrayList<>(waitingPlayers);
+                    sessionPlayers.add(handler);
+
+                    GameSession gameSession = new GameSession(sessionPlayers);
+                    sessionPlayers.forEach(h -> h.setGameSession(gameSession));
+                    new Thread(gameSession).start();
+
+                    waitingPlayers.clear();
+                } else {
+                    waitingPlayers.add(handler);
+                    waitingPlayers.forEach(h ->
+                            h.send("STATUS: Ожидание " + (4 - waitingPlayers.size()) + " игроков")
+                    );
+                }
             }
         }
     }

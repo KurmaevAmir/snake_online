@@ -11,11 +11,16 @@ public class SnakeState {
     public List<Point> body = new ArrayList<>();
 
     public SnakeState(String[] data) {
-        this.color = Color.valueOf(data[1]);
-        for (int i=2; i<data.length; i+=2) {
+        try {
+            this.color = Color.web(data[2]); // Берем цвет из data[2]
+        } catch (IllegalArgumentException e) {
+            this.color = Color.RED;
+        }
+        // Начинаем с индекса 4 (после id, цвета и счета)
+        for (int i = 4; i < data.length; i += 2) {
             body.add(new Point(
                     Integer.parseInt(data[i]),
-                    Integer.parseInt(data[i+1])
+                    Integer.parseInt(data[i + 1])
             ));
         }
     }

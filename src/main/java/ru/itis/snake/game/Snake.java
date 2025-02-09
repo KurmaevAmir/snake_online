@@ -16,11 +16,6 @@ public class Snake extends GameObject {
     private Direction nextDirection = Direction.RIGHT;
     private int length = 1;
 
-//    public Snake(Color color) {
-//        this.color = color;
-//        body.add(new Point(0,0));
-//    }
-
     public Snake() {
         super(Game.SCREEN_WIDTH/2, Game.SCREEN_HEIGHT/2, Color.GREEN);
         body.add(new Point(Game.SCREEN_WIDTH/2, Game.SCREEN_HEIGHT/2)); // Инициализация тела
@@ -98,6 +93,10 @@ public class Snake extends GameObject {
 
     public Point getHead() {
         return body.get(0);
+    }
+
+    public int getLength() {
+        return length;
     }
 
     public Set<Point> getOccupiedCells() {

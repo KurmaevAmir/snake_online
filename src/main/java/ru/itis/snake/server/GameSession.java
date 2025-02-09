@@ -18,6 +18,10 @@ public class GameSession implements Runnable {
     private List<Handler> players;
     private Map<String, Snake> snakes = new ConcurrentHashMap<>();
     private Point apple = new Point(0, 0);
+    private Point badFood = new Point(0, 0);
+    private Point obstacle = new Point(0, 0);
+    private Handler handler;
+    private Map<String, Integer> scores = new ConcurrentHashMap<>();
 
     public GameSession(List<Handler> players) {
         this.players = players;
@@ -29,14 +33,21 @@ public class GameSession implements Runnable {
         Random rand = new Random();
 
         for (int i=0; i<players.size(); i++) {
-            Handler h = players.get(i);
+            this.handler = players.get(i);
             Snake s = new Snake();
             s.setColor(colors[i]);
             s.setPosition(rand.nextInt(32)*GRID_SIZE, rand.nextInt(24)*GRID_SIZE);
-            snakes.put(h.getIdentifier(), s);
-            h.send("COLOR:" + colors[i]);
+            snakes.put(handler.getIdentifier(), s);
+            handler.send("COLOR:" + colors[i]);
+            scores.put(handler.getIdentifier(), 0);
         }
+        spawnAllItems();
+    }
+
+    private void spawnAllItems() {
         spawnApple();
+        spawnBadFood();
+        spawnObstacle();
     }
 
     private void spawnApple() {
@@ -46,7 +57,6 @@ public class GameSession implements Runnable {
         snakes.values().forEach(s -> occupied.addAll(s.body));
 
         do {
-            // Создаем новый объект Point вместо изменения существующего
             apple = new Point(
                     rand.nextInt(32) * GRID_SIZE,
                     rand.nextInt(24) * GRID_SIZE
@@ -54,9 +64,40 @@ public class GameSession implements Runnable {
         } while (occupied.contains(apple));
     }
 
+    private void spawnBadFood() {
+        Random rand = new Random();
+        Set<Point> occupied = new HashSet<>();
+        snakes.values().forEach(s -> occupied.addAll(s.body));
+        occupied.add(apple);
+        occupied.add(obstacle);
+
+        do {
+            badFood = new Point(
+                    rand.nextInt(32) * GRID_SIZE,
+                    rand.nextInt(24) * GRID_SIZE
+            );
+        } while (occupied.contains(badFood));
+    }
+
+    private void spawnObstacle() {
+        Random rand = new Random();
+        Set<Point> occupied = new HashSet<>();
+        snakes.values().forEach(s -> occupied.addAll(s.body));
+        occupied.add(apple);
+        occupied.add(badFood);
+
+        do {
+            obstacle = new Point(
+                    rand.nextInt(32) * GRID_SIZE,
+                    rand.nextInt(24) * GRID_SIZE
+            );
+        } while (occupied.contains(obstacle));
+    }
+
     @Override
     public void run() {
-        while (snakes.size() > 1) {
+        while (snakes.size() > 1 && !Thread.currentThread().isInterrupted()) {
+            handleDisconnections();
             updateGame();
             broadcastState();
             checkCollisions();
@@ -69,7 +110,6 @@ public class GameSession implements Runnable {
     private void updateGame() {
         snakes.values().forEach(snake -> {
             snake.move();
-            // Добавляем проверку границ
             Point head = snake.body.get(0);
             if(head.x < 0) head.x = Game.SCREEN_WIDTH - Game.GRID_SIZE;
             if(head.x >= Game.SCREEN_WIDTH) head.x = 0;
@@ -79,21 +119,36 @@ public class GameSession implements Runnable {
     }
 
     private void broadcastState() {
-        if (apple == null) return;
+        if (players.isEmpty() || snakes.isEmpty()) return;
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("APPLE:").append(apple.x).append(":").append(apple.y).append(";");
+        StringJoiner sj = new StringJoiner(";");
+        sj.add("APPLE:" + apple.x + ":" + apple.y);
+        sj.add("BADFOOD:" + badFood.x + ":" + badFood.y);
+        sj.add("OBSTACLE:" + obstacle.x + ":" + obstacle.y);
 
         snakes.forEach((id, s) -> {
-            sb.append(id).append(":").append(s.color.toString()).append(":");
-            for(Point p : s.body) {
+            StringBuilder sb = new StringBuilder("PLAYER:")
+                    .append(id).append(":")
+                    .append(colorToHex(s.color)).append(":")
+                    .append(scores.get(id)).append(":");
+
+            for (Point p : s.body) {
                 sb.append(p.x).append(":").append(p.y).append(":");
             }
-            if(!s.body.isEmpty()) sb.deleteCharAt(sb.length()-1);
-            sb.append(";");
+            if (!s.body.isEmpty()) sb.setLength(sb.length() - 1);
+
+            sj.add(sb.toString());
         });
 
-        players.forEach(h -> h.send("STATE:" + sb));
+        String state = sj.toString();
+        players.forEach(h -> h.send("STATE:" + state));
+    }
+
+    private String colorToHex(Color color) {
+        return String.format("#%02x%02x%02x",
+                (int)(color.getRed() * 255),
+                (int)(color.getGreen() * 255),
+                (int)(color.getBlue() * 255));
     }
 
     public void updateSnakeDirection(String playerId, KeyCode keyCode) {
@@ -119,11 +174,9 @@ public class GameSession implements Runnable {
     private void checkCollisions() {
         Set<String> toRemove = new HashSet<>();
 
-        // Проверка столкновений с другими змейками
         snakes.forEach((id, snake) -> {
             Point head = snake.body.get(0);
 
-            // Столкновение с другими змейками
             snakes.forEach((otherId, otherSnake) -> {
                 if (!id.equals(otherId) && otherSnake.body.stream().anyMatch(p -> p.equals(head))) {
                     toRemove.add(id);
@@ -133,11 +186,32 @@ public class GameSession implements Runnable {
             // Столкновение с яблоком
             if (head.equals(apple)) {
                 snake.grow();
+                scores.put(id, snake.getLength() - 1);
+                players.stream()
+                        .filter(h -> h.getIdentifier().equals(id))
+                        .findFirst()
+                        .ifPresent(h -> h.sendScore(scores.get(id)));
                 spawnApple();
+            }
+
+            if (head.equals(badFood)) {
+                snake.grow();
+                scores.put(id, snake.getLength() - 1);
+                players.stream()
+                        .filter(h -> h.getIdentifier().equals(id))
+                        .findFirst()
+                        .ifPresent(h -> h.sendScore(scores.get(id)));
+                spawnApple();
+            }
+
+            if (head.equals(obstacle)) {
+                snake.reset();
+                scores.put(id, 0);
+                handler.sendScore(0);
+                spawnObstacle();
             }
         });
 
-        // Удаление проигравших
         toRemove.forEach(id -> {
             snakes.remove(id);
             players.removeIf(h -> h.getIdentifier().equals(id));
@@ -152,7 +226,17 @@ public class GameSession implements Runnable {
     }
 
     private void declareWinner() {
-        String winner = snakes.keySet().iterator().next();
-        players.forEach(h -> h.send("WINNER:" + winner));
+        if (snakes.isEmpty()) return;
+
+        String winnerId = snakes.keySet().iterator().next();
+        String winnerName = players.stream()
+                .filter(h -> h.getIdentifier().equals(winnerId))
+                .findFirst()
+                .map(h -> h.username)
+                .orElse("Unknown Player");
+
+        players.forEach(h -> h.send("WINNER:" + winnerName));
+        try { Thread.sleep(5000); }
+        catch (InterruptedException e) { e.printStackTrace(); }
     }
 }

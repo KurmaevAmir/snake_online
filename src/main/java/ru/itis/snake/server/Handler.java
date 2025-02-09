@@ -15,7 +15,7 @@ public class Handler implements Runnable {
     private BufferedWriter writer;
 
     private String identifier;
-    private String username;
+    public String username;
 
     private static final List<Handler> handlers = new ArrayList<>();
 
@@ -55,7 +55,6 @@ public class Handler implements Runnable {
     @Override
     public void run() {
         try {
-            // Убрано повторное чтение идентификатора и имени
             while (socket.isConnected()) {
                 String message = reader.readLine();
                 if (message == null) break;
@@ -96,6 +95,10 @@ public class Handler implements Runnable {
     private void removeHanlder() {
         handlers.remove(this);
         broadcast("SERVER: " + username + "#" + identifier + " вышел");
+    }
+
+    public void sendScore(int score) {
+        send("SCORE:" + score);
     }
 
     private void closeEverything(Socket socket, BufferedReader reader, BufferedWriter writer) {
