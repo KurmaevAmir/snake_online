@@ -1,17 +1,21 @@
 package main.java.ru.itis.snake.server;
 
+import javafx.scene.input.KeyCode;
+
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Handler implements Runnable {
+    private volatile boolean isConnected = true;
     private Socket socket;
+    private GameSession gameSession;
     private BufferedReader reader;
     private BufferedWriter writer;
 
     private String identifier;
-    private String username;
+    public String username;
 
     private static final List<Handler> handlers = new ArrayList<>();
 
@@ -20,6 +24,7 @@ public class Handler implements Runnable {
             this.socket = socket;
             this.writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
             this.identifier = reader.readLine();
             this.username = reader.readLine();
             handlers.add(this);
@@ -28,26 +33,47 @@ public class Handler implements Runnable {
         }
     }
 
+    public boolean isConnected() {
+        return isConnected;
+    }
+
+    public void setGameSession(GameSession session) {
+        this.gameSession = session;
+    }
+
+    private void handlePlayerInput(String message) {
+        String dirStr = message.split(":")[1];
+        KeyCode keyCode = KeyCode.valueOf(dirStr);
+
+        if(gameSession != null) {
+            gameSession.updateSnakeDirection(this.identifier, keyCode);
+        }
+    }
+
+    public String getIdentifier() { return identifier; }
+
     @Override
     public void run() {
         try {
-            String message;
-
-            broadcast(username + "#" + identifier + " присоединился к игре");
-
             while (socket.isConnected()) {
-                message = reader.readLine();
-                if (message == null) {
-                    closeEverything(socket, reader, writer);
-                    return;
+                String message = reader.readLine();
+                if (message == null) break;
+
+                if (message.startsWith("INPUT")) {
+                    handlePlayerInput(message);
                 }
-
-                System.out.println("MESSAGE: " + message);
-
-                // Логика сообщений пока стоит временная заглушка
-                broadcast(message);
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
+            closeEverything(socket, reader, writer);
+        }
+    }
+
+    public void send(String message) {
+        try {
+            writer.write(message);
+            writer.newLine();
+            writer.flush();
+        } catch (IOException e) {
             closeEverything(socket, reader, writer);
         }
     }
@@ -71,7 +97,12 @@ public class Handler implements Runnable {
         broadcast("SERVER: " + username + "#" + identifier + " вышел");
     }
 
+    public void sendScore(int score) {
+        send("SCORE:" + score);
+    }
+
     private void closeEverything(Socket socket, BufferedReader reader, BufferedWriter writer) {
+        isConnected = false;
         removeHanlder();
         try {
             if (reader != null) {

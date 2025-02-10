@@ -3,7 +3,7 @@ package main.java.ru.itis.snake.game;
 import java.util.Objects;
 
 public class Point {
-    public final int x, y;
+    public int x, y;
 
     public Point(int x, int y) {
         this.x = x;
