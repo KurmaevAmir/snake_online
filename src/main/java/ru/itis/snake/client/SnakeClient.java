@@ -6,6 +6,7 @@ import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -14,10 +15,8 @@ import main.java.ru.itis.snake.server.GameState;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.Scanner;
+import java.util.Optional;
 import java.util.UUID;
-
-import static com.sun.scenario.effect.impl.prism.PrEffectHelper.render;
 
 public class SnakeClient extends Application {
     private Socket socket;
@@ -42,6 +41,18 @@ public class SnakeClient extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Имя игрока");
+        dialog.setHeaderText("Введите имя игрока:");
+        dialog.setContentText("Имя:");
+        Optional<String> result = dialog.showAndWait();
+        if (result.isPresent() && !result.get().trim().isEmpty()) {
+            username = result.get().trim();
+        } else {
+            Platform.exit();
+            return;
+        }
+
         connectToServer(primaryStage);
     }
 
@@ -50,10 +61,6 @@ public class SnakeClient extends Application {
             socket = new Socket(SERVER_IP, SERVER_PORT);
             writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-            Scanner scanner = new Scanner(System.in);
-            System.out.print("Введите имя: ");
-            username = scanner.nextLine();
 
             writer.write(uuid.toString());
             writer.newLine();
@@ -159,8 +166,6 @@ public class SnakeClient extends Application {
         gc.setFill(Color.GRAY);
         gc.fillRoundRect(gameState.obstacle.x, gameState.obstacle.y, 20, 20, 10, 10);
     }
-
-
 
     private void closeEverything(Socket socket, BufferedReader reader, BufferedWriter writer) {
         try {
