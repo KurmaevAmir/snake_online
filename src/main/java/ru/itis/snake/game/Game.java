@@ -1,9 +1,5 @@
 package main.java.ru.itis.snake.game;
 
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.stage.Stage;
-
 import javafx.animation.AnimationTimer;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
@@ -12,8 +8,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-
-import java.util.*;
 
 public class Game {
     public static final int SCREEN_WIDTH = 640;
@@ -30,7 +24,6 @@ public class Game {
     private final BadFood badFood;
     private final Obstacle obstacle;
     private int score = 0;
-    private int record = 0;
     private long lastUpdate = 0;
 
     public Game(Stage primaryStage) {

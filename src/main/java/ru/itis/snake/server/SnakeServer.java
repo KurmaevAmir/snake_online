@@ -8,8 +8,7 @@ import java.util.List;
 
 public class SnakeServer {
     private static final int PORT = 1234;
-    private static List<Handler> waitingPlayers = new ArrayList<>();
-
+    private static final List<Handler> waitingPlayers = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
         ServerSocket serverSocket = new ServerSocket(PORT);
@@ -20,15 +19,32 @@ public class SnakeServer {
             new Thread(handler).start();
 
             synchronized (SnakeServer.class) {
-                if (waitingPlayers.size() >= 3) {
-                    List<Handler> sessionPlayers = new ArrayList<>(waitingPlayers);
-                    sessionPlayers.add(handler);
+                // Если уже ждут 3 игрока, добавляем четвертого и запускаем отсрочку старта игры
+                if (waitingPlayers.size() == 3) {
+                    waitingPlayers.add(handler);
 
-                    GameSession gameSession = new GameSession(sessionPlayers);
-                    sessionPlayers.forEach(h -> h.setGameSession(gameSession));
-                    new Thread(gameSession).start();
+                    final List<Handler> sessionPlayers = new ArrayList<>(waitingPlayers);
 
                     waitingPlayers.clear();
+
+                    new Thread(() -> {
+                        try {
+                            for (int countdown = 10; countdown > 0; countdown--) {
+                                final int timeLeft = countdown;
+                                sessionPlayers.forEach(h ->
+                                        h.send("STATUS: Игра начнется через " + timeLeft + " секунд"));
+                                Thread.sleep(1000);
+                            }
+                            sessionPlayers.forEach(h
+                                    -> h.send("STATUS: Игра началась"));
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+
+                        GameSession gameSession = new GameSession(sessionPlayers);
+                        sessionPlayers.forEach(h -> h.setGameSession(gameSession));
+                        new Thread(gameSession).start();
+                    }).start();
                 } else {
                     waitingPlayers.add(handler);
                     waitingPlayers.forEach(h ->

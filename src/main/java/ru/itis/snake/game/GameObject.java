@@ -6,12 +6,6 @@ import javafx.scene.paint.Color;
 import java.util.HashSet;
 import java.util.Set;
 
-import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.paint.Color;
-
-import java.util.HashSet;
-import java.util.Set;
-
 public abstract class GameObject {
     protected int x;
     protected int y;
