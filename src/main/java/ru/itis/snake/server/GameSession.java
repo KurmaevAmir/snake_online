@@ -180,7 +180,6 @@ public class GameSession implements Runnable {
                 }
             });
 
-            // Столкновение с яблоком
             if (head.equals(apple)) {
                 snake.grow();
                 scores.put(id, snake.getLength() - 1);
@@ -191,7 +190,6 @@ public class GameSession implements Runnable {
                 spawnApple();
             }
 
-            // Столковение с плохой едой
             if (head.equals(badFood)) {
                 snake.shrink();
                 scores.put(id, snake.getLength() - 1);
@@ -202,7 +200,6 @@ public class GameSession implements Runnable {
                 spawnApple();
             }
 
-            // Столкновение с препятствием
             if (head.equals(obstacle)) {
                 snake.reset();
                 scores.put(id, 0);

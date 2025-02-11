@@ -19,7 +19,6 @@ public class SnakeServer {
             new Thread(handler).start();
 
             synchronized (SnakeServer.class) {
-                // Если уже ждут 3 игрока, добавляем четвертого и запускаем отсрочку старта игры
                 if (waitingPlayers.size() == 3) {
                     waitingPlayers.add(handler);
 
