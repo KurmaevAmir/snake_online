@@ -18,7 +18,7 @@ public class Snake extends GameObject {
 
     public Snake() {
         super(Game.SCREEN_WIDTH/2, Game.SCREEN_HEIGHT/2, Color.GREEN);
-        body.add(new Point(Game.SCREEN_WIDTH/2, Game.SCREEN_HEIGHT/2)); // Инициализация тела
+        body.add(new Point(Game.SCREEN_WIDTH/2, Game.SCREEN_HEIGHT/2));
         reset();
     }
 
