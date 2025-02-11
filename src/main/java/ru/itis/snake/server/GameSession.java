@@ -8,10 +8,7 @@ import main.java.ru.itis.snake.game.Snake;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.io.IOException;
 
-import static com.sun.javafx.scene.traversal.Direction.UP;
-import static javafx.scene.input.KeyCode.W;
 
 public class GameSession implements Runnable {
     private static final int GRID_SIZE = 20;
@@ -194,8 +191,9 @@ public class GameSession implements Runnable {
                 spawnApple();
             }
 
+            // Столковение с плохой едой
             if (head.equals(badFood)) {
-                snake.grow();
+                snake.shrink();
                 scores.put(id, snake.getLength() - 1);
                 players.stream()
                         .filter(h -> h.getIdentifier().equals(id))
@@ -204,6 +202,7 @@ public class GameSession implements Runnable {
                 spawnApple();
             }
 
+            // Столкновение с препятствием
             if (head.equals(obstacle)) {
                 snake.reset();
                 scores.put(id, 0);

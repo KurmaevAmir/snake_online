@@ -14,4 +14,3 @@ public class BadFood extends GameObject {
         gc.fillRect(x, y, Game.GRID_SIZE, Game.GRID_SIZE);
     }
 }
-

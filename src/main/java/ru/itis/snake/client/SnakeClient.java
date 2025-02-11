@@ -3,6 +3,7 @@ package main.java.ru.itis.snake.client;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.geometry.VPos;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -10,6 +11,8 @@ import javafx.scene.control.TextInputDialog;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import main.java.ru.itis.snake.server.GameState;
 
@@ -34,6 +37,10 @@ public class SnakeClient extends Application {
     private Canvas canvas = new Canvas(640, 480);
     private GraphicsContext gc = canvas.getGraphicsContext2D();
     private Stage stage;
+
+    private String statusMessage = "";
+    private boolean gameStarted = false;
+    private long gameStartTimestamp = 0;
 
     public static void main(String[] args) {
         launch(args);
@@ -95,7 +102,7 @@ public class SnakeClient extends Application {
             }
         });
         stage.setScene(scene);
-        stage.setTitle("Змейка - Ожидание игроков...");
+        stage.setTitle("Змейка");
         stage.show();
 
         new AnimationTimer() {
@@ -123,11 +130,24 @@ public class SnakeClient extends Application {
                 playerColor = Color.valueOf(parts[1]);
                 break;
             case "STATE":
-                gameState.updateFromString(parts[1]);
+                Platform.runLater(() -> {
+                    gameState.updateFromString(parts[1]);
+                    if (!gameStarted) {
+                        gameStarted = true;
+                        gameStartTimestamp = System.currentTimeMillis();
+                    }
+                });
                 break;
             case "STATUS":
-                Platform.runLater(() ->
-                        stage.setTitle("Змейка - " + parts[1]));
+                Platform.runLater(() -> {
+                    statusMessage = parts[1].trim();
+                    if ("Игра началась".equals(statusMessage)) {
+                        javafx.animation.PauseTransition pause =
+                                new javafx.animation.PauseTransition(javafx.util.Duration.seconds(2));
+                        pause.setOnFinished(e -> statusMessage = "");
+                        pause.play();
+                    }
+                });
                 break;
             case "SCORE":
                 Platform.runLater(() ->
@@ -137,7 +157,9 @@ public class SnakeClient extends Application {
                 gameOver = true;
                 Platform.runLater(() -> {
                     gc.setFill(Color.WHITE);
-                    gc.fillText("Победитель: " + parts[1], 240, 240); // Центрируем текст
+                    gc.setTextAlign(TextAlignment.CENTER);
+                    gc.setFont(new Font(24));
+                    gc.fillText("Победитель: " + parts[1], canvas.getWidth() / 2, canvas.getHeight() / 2);
                 });
                 break;
         }
@@ -147,24 +169,32 @@ public class SnakeClient extends Application {
         if (gameOver) return;
 
         gc.setFill(Color.BLACK);
-        gc.fillRect(0, 0, 640, 480);
+        gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
-        gameState.getSnakes().forEach((id, snake) -> {
-            gc.setFill(snake.color);
-            snake.body.forEach(p ->
-                    gc.fillRect(p.x, p.y, 19, 19));
-        });
+        if (gameState != null) {
+            gameState.getSnakes().forEach((id, snake) -> {
+                gc.setFill(snake.color);
+                snake.body.forEach(p ->
+                        gc.fillRect(p.x, p.y, 19, 19));
+            });
 
-        gc.setFill(Color.RED);
-        gc.fillOval(gameState.apple.x, gameState.apple.y, 20, 20);
+            gc.setFill(Color.RED);
+            gc.fillOval(gameState.apple.x, gameState.apple.y, 20, 20);
 
-        // Отрисовка BadFood
-        gc.setFill(Color.ORANGE);
-        gc.fillRect(gameState.badFood.x, gameState.badFood.y, 20, 20);
+            gc.setFill(Color.ORANGE);
+            gc.fillRect(gameState.badFood.x, gameState.badFood.y, 20, 20);
 
-        // Отрисовка Obstacle
-        gc.setFill(Color.GRAY);
-        gc.fillRoundRect(gameState.obstacle.x, gameState.obstacle.y, 20, 20, 10, 10);
+            gc.setFill(Color.GRAY);
+            gc.fillRoundRect(gameState.obstacle.x, gameState.obstacle.y, 20, 20, 10, 10);
+        }
+
+        if (!statusMessage.isEmpty()) {
+            gc.setFill(Color.WHITE);
+            gc.setFont(new Font(36));
+            gc.setTextAlign(TextAlignment.CENTER);
+            gc.setTextBaseline(VPos.CENTER);
+            gc.fillText(statusMessage, canvas.getWidth() / 2, canvas.getHeight() / 2);
+        }
     }
 
     private void closeEverything(Socket socket, BufferedReader reader, BufferedWriter writer) {
